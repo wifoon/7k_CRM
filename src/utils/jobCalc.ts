@@ -3,7 +3,7 @@
  * Czyste funkcje łączące silniki screenCalc, trussCalc oraz stan magazynu.
  */
 
-import { screenToCases } from './screenCalc';
+import { screenToCases, calculateReinforcementPlates } from './screenCalc';
 import { solveGoalpost, solveTrussSections } from './trussCalc';
 import {
   Job,
@@ -208,14 +208,18 @@ export function calculateJobBOM(params: {
     // 2. Bramka / Kreska: gdy zaznaczono usePlates (wzmocnienie w plenerze)
     if (constructionMapping.platesId) {
       const cols = Math.max(1, Math.round(screen.widthM / 0.5));
-      const fullRows = Math.max(1, Math.floor(screen.heightM / 1.0));
+      const fullRows = Math.floor(screen.heightM / 1.0);
+      const halfRows = screen.heightM % 1.0 >= 0.5 ? 1 : 0;
+      const totalRows = fullRows + halfRows;
 
       if (screen.mountingType === 'elki') {
         const platesQty = Math.max(4, Math.ceil(cols / 2) * 2);
         addDemand(constructionMapping.platesId, platesQty, `${screen.name} (Blachy montażowe do e-lek)`);
       } else if ((screen.mountingType === 'bramka' || screen.mountingType === 'kreska') && screen.usePlates) {
-        const approxPlates = Math.max(4, (cols - 1) * Math.max(1, fullRows - 1));
-        addDemand(constructionMapping.platesId, approxPlates, `${screen.name} (Blachy usztywniające naroża)`);
+        const platesQty = calculateReinforcementPlates(cols, totalRows);
+        if (platesQty > 0) {
+          addDemand(constructionMapping.platesId, platesQty, `${screen.name} (Blachy usztywniające naroża)`);
+        }
       }
     }
   });

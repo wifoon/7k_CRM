@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { calculateReinforcementPlates } from "@/utils/screenCalc";
 
 interface ScreenMountingControlsProps {
   mountingType: JobScreenConfig["mountingType"];
@@ -55,6 +58,12 @@ export function ScreenMountingControls({
   const minPostHeight = Math.round((heightM + 1.0) * 10) / 10;
   const currentBeamWidth = customTrussWidthM ?? widthM;
   const currentPostHeight = customTrussHeightM ?? minPostHeight;
+
+  const cols = Math.max(1, Math.round(widthM / 0.5));
+  const fullRows = Math.floor(heightM / 1.0);
+  const halfRows = heightM % 1.0 >= 0.5 ? 1 : 0;
+  const totalRows = fullRows + halfRows;
+  const reinforcementPlatesQty = calculateReinforcementPlates(cols, totalRows);
 
   const isCustomBeam = customTrussWidthM !== undefined && customTrussWidthM !== widthM;
   const isCustomPost = customTrussHeightM !== undefined && customTrussHeightM !== minPostHeight;
@@ -417,27 +426,31 @@ export function ScreenMountingControls({
 
       {/* Blachy usztywniające (Outdoor / Wiatr) dla Bramki i Kreski */}
       {(mountingType === "bramka" || mountingType === "kreska") && (
-        <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-xs font-semibold text-slate-300 block">
-                Blachy usztywniające (Outdoor / Wiatr)
-              </Label>
-              <span className="text-[10px] text-slate-500 block">
-                Wzmocnienie naroży łączeń kabinetów
-              </span>
+        <div className="pt-2 border-t border-slate-800/80">
+          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="plates-switch" className="text-xs font-semibold text-slate-200 cursor-pointer">
+                  Blachy usztywniające (Outdoor / Wiatr)
+                </Label>
+                {usePlates && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 px-1.5 font-mono text-blue-400 border-blue-500/30 bg-blue-500/10"
+                  >
+                    {reinforcementPlatesQty} szt. ({Math.max(0, cols - 1)} × {Math.max(0, totalRows - 1)})
+                  </Badge>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Wzmocnienie łączeń naroży kabinetów przy silnym wietrze
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => onChangeUsePlates?.(!usePlates)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                usePlates
-                  ? "bg-blue-600 text-white border-blue-500 shadow-sm"
-                  : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-              }`}
-            >
-              {usePlates ? "Włączone (pakiet blach)" : "Brak (indoor)"}
-            </button>
+            <Switch
+              id="plates-switch"
+              checked={!!usePlates}
+              onCheckedChange={(val) => onChangeUsePlates?.(val)}
+            />
           </div>
         </div>
       )}

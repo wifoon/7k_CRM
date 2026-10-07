@@ -61,6 +61,8 @@ assert('casesTotalNeeded = 7',   screen.casesTotalNeeded,   7);
 assert('areaSqM = 21',           screen.areaSqM,           21);
 assert('hangingBarsNeeded = 12', screen.hangingBarsNeeded, 12);   // 6m / 0.5m
 assert('isHybrid = true',        screen.isHybrid,           true);
+assert('totalRows = 4',          screen.totalRows,          4);
+assert('reinforcementPlates = 33 (11 * 3)', screen.reinforcementPlates, 33);
 
 // ─── TEST 2: SILNIK KRATOWNIC ─────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@
 import React from "react";
 import { JobScreenConfig } from "@/lib/mockData";
 import { solveTrussSections } from "@/utils/trussCalc";
+import { calculateReinforcementPlates } from "@/utils/screenCalc";
 import { Box, Layers, ShieldCheck } from "lucide-react";
 
 interface ScreenBOMSummaryCardProps {
@@ -31,6 +32,8 @@ export function ScreenBOMSummaryCard({
   const cols = Math.max(1, Math.round(widthM / 0.5));
   const fullRows = Math.floor(heightM / 1.0);
   const halfRows = heightM % 1.0 >= 0.5 ? 1 : 0;
+  const totalRows = fullRows + halfRows;
+  const reinforcementPlatesQty = calculateReinforcementPlates(cols, totalRows);
 
   const fullCabinets = cols * fullRows;
   const halfCabinets = cols * halfRows;
@@ -211,7 +214,7 @@ export function ScreenBOMSummaryCard({
           <div className="flex items-center justify-between text-slate-300">
             <span className="text-slate-400">Blachy usztywniające:</span>
             <strong className="font-mono text-blue-300">
-              pakiet ~{Math.max(4, (cols - 1) * Math.max(1, fullRows - 1))} szt. (naroża)
+              pakiet {reinforcementPlatesQty} szt. ({Math.max(0, cols - 1)} × {Math.max(0, totalRows - 1)} naroża)
             </strong>
           </div>
         )}
