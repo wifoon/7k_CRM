@@ -9,6 +9,8 @@ import { ScreenMountingControls } from "./ScreenMountingControls";
 import { ScreenBOMSummaryCard } from "./ScreenBOMSummaryCard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, ChevronRight } from "lucide-react";
+import { useInventory } from "@/hooks/useInventory";
+import { CabinetRowType, ScreenMatrixMode } from "@/utils/screenCalc";
 
 interface ScreenStudioViewProps {
   screen: JobScreenConfig;
@@ -31,25 +33,24 @@ export function ScreenStudioView({
   const [systemId, setSystemId] = useState(screen.systemId || ledSystems[0]?.id || "");
   const [widthM, setWidthM] = useState<number>(screen.widthM || 6.0);
   const [heightM, setHeightM] = useState<number>(screen.heightM || 3.5);
+  const [matrixMode, setMatrixMode] = useState<ScreenMatrixMode>(screen.matrixMode || "hybrid");
+  const [customRows, setCustomRows] = useState<CabinetRowType[] | undefined>(screen.customRows);
   const [mountingType, setMountingType] = useState<JobScreenConfig["mountingType"]>(
     screen.mountingType || "bramka"
   );
-  const [hoistType, setHoistType] = useState<"manual" | "electric">(
-    screen.hoistType || "manual"
-  );
-  const [customTrussWidthM, setCustomTrussWidthM] = useState<number | undefined>(
-    screen.customTrussWidthM
-  );
-  const [customTrussHeightM, setCustomTrussHeightM] = useState<number | undefined>(
-    screen.customTrussHeightM
-  );
-  const [hoistSource, setHoistSource] = useState<"none" | "warehouse">(
-    screen.hoistSource || "none"
-  );
+  const [hoistType, setHoistType] = useState<"manual" | "electric">(screen.hoistType || "manual");
+  const [customTrussWidthM, setCustomTrussWidthM] = useState<number | undefined>(screen.customTrussWidthM);
+  const [customTrussHeightM, setCustomTrussHeightM] = useState<number | undefined>(screen.customTrussHeightM);
+  const [hoistSource, setHoistSource] = useState<"none" | "warehouse">(screen.hoistSource || "none");
   const [hoistQty, setHoistQty] = useState<number>(screen.hoistQty || 2);
   const [usePlates, setUsePlates] = useState<boolean>(
     screen.mountingType === "elki" ? true : (screen.usePlates ?? false)
   );
+
+  const { items: inventory } = useInventory();
+  const currentSystem = ledSystems.find((s) => s.id === systemId);
+  const fullEquipment = inventory.find((i) => i.id === currentSystem?.fullItemId);
+  const halfEquipment = inventory.find((i) => i.id === currentSystem?.halfItemId);
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -68,6 +69,8 @@ export function ScreenStudioView({
       ...screen,
       name,
       systemId,
+      matrixMode,
+      customRows,
       widthM: Number(widthM),
       heightM: Number(heightM),
       mountingType,
@@ -83,7 +86,7 @@ export function ScreenStudioView({
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* ─── GÓRNY PASEK AKCJI STUDIA EKRANU (CZYSTY TOOLBAR) ─── */}
+      {/* Pasek akcji studia */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#111622] border border-slate-800/80 rounded-xl p-3 sm:px-5 sm:py-3.5 shadow-md">
         <div className="flex items-center gap-3">
           <Button
@@ -101,8 +104,6 @@ export function ScreenStudioView({
             Konfiguracja ekranu: <span className="text-blue-400 font-bold">{name || "Nowy Ekran"}</span>
           </span>
         </div>
-
-        {/* Przyciski zapisu i anulowania */}
         <div className="flex items-center gap-2.5 ml-auto sm:ml-0">
           <Button
             type="button"
@@ -125,24 +126,28 @@ export function ScreenStudioView({
         </div>
       </div>
 
-      {/* ─── UKŁAD 2-KOLUMNOWY (BENTO GRID: CANVAS + KONTROLKI) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Lewa Kolumna (7 kolumn): Wymiary (góra) + Interaktywny Canvas 2D (dół) */}
         <div className="lg:col-span-7 space-y-5">
           <ScreenDimensionControls
             widthM={widthM}
             heightM={heightM}
             onChangeWidth={setWidthM}
-            onChangeHeight={setHeightM}
+            onChangeHeight={(h) => {
+              setHeightM(h);
+              setCustomRows(undefined);
+            }}
           />
 
           <ScreenPreviewCanvas
             widthM={widthM}
             heightM={heightM}
-            mountingType={mountingType}
             screenName={name}
-            customTrussWidthM={customTrussWidthM}
-            customTrussHeightM={customTrussHeightM}
+            customRows={customRows}
+            matrixMode={matrixMode}
+            onChangeCustomRows={setCustomRows}
+            onChangeMatrixMode={setMatrixMode}
+            fullEquipment={fullEquipment}
+            halfEquipment={halfEquipment}
           />
         </div>
 
@@ -185,6 +190,8 @@ export function ScreenStudioView({
             hoistSource={hoistSource}
             hoistQty={hoistQty}
             usePlates={usePlates}
+            customRows={customRows}
+            matrixMode={matrixMode}
           />
         </div>
       </div>

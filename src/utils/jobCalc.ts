@@ -93,6 +93,7 @@ export function calculateJobBOM(params: {
       cabinetsPerCaseHalf: cabPerCaseHalf,
       hangingBarLengthM: 0.5,
       matrixMode: screen.matrixMode || 'hybrid',
+      customRows: screen.customRows,
     });
 
     totalCases += screenCalc.casesTotalNeeded;
@@ -207,10 +208,8 @@ export function calculateJobBOM(params: {
     // 1. eLki: ZAWSZE automatycznie do złapania e-lek do kabinetów
     // 2. Bramka / Kreska: gdy zaznaczono usePlates (wzmocnienie w plenerze)
     if (constructionMapping.platesId) {
-      const cols = Math.max(1, Math.round(screen.widthM / 0.5));
-      const fullRows = Math.floor(screen.heightM / 1.0);
-      const halfRows = screen.heightM % 1.0 >= 0.5 ? 1 : 0;
-      const totalRows = fullRows + halfRows;
+      const cols = screenCalc.columns;
+      const totalRows = screenCalc.totalRows;
 
       if (screen.mountingType === 'elki') {
         const platesQty = Math.max(4, Math.ceil(cols / 2) * 2);

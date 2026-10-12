@@ -4,41 +4,40 @@
  */
 
 export type ScreenMatrixMode = 'hybrid' | 'full_only' | 'half_only';
+export type CabinetRowType = 'full' | 'half';
 
 export interface ScreenCalcInput {
-  widthM: number;         // Szerokość ekranu w metrach
-  heightM: number;        // Wysokość ekranu w metrach
-  cabinetWidthCm: number; // Szerokość kabinetu w cm (np. 50)
-  cabinetHeightCm: number;// Wysokość pełnego kabinetu w cm (np. 100)
-  halfHeightCm: number;   // Wysokość połówki w cm (np. 50)
-  cabinetsPerCaseFull: number; // Klocków na skrzynię – pełne
-  cabinetsPerCaseHalf: number; // Klocków na skrzynię – połówki
-  hangingBarLengthM?: number;  // Długość jednej belki (default: 0.5m)
-  matrixMode?: ScreenMatrixMode; // Tryb budowy: 'hybrid' | 'full_only' | 'half_only'
+  widthM: number;
+  heightM: number;
+  cabinetWidthCm: number;
+  cabinetHeightCm: number;
+  halfHeightCm: number;
+  cabinetsPerCaseFull: number;
+  cabinetsPerCaseHalf: number;
+  hangingBarLengthM?: number;
+  matrixMode?: ScreenMatrixMode;
+  customRows?: CabinetRowType[];
+  resolutionX?: number;
+  resolutionYFull?: number;
+  resolutionYHalf?: number;
 }
 
 export interface ScreenCalcResult {
-  // Siatka
   columns: number;
   fullRows: number;
   halfRows: number;
   totalRows: number;
-
-  // Kabinety
+  rows: CabinetRowType[];
   fullCabinets: number;
   halfCabinets: number;
-  reinforcementPlates: number; // Blachy usztywniające naroża: (columns - 1) * (totalRows - 1)
-
-  // Skrzynie (zaokrąglone w górę – kluczowa reguła domenowa)
+  reinforcementPlates: number;
   casesFullNeeded: number;
   casesHalfNeeded: number;
   casesTotalNeeded: number;
-
-  // Powierzchnia i belki
   areaSqM: number;
   hangingBarsNeeded: number;
-
-  // Diagnostyka
+  pixelWidth: number;
+  pixelHeight: number;
   matrixMode: ScreenMatrixMode;
   isHybrid: boolean;
   widthM: number;
@@ -61,6 +60,7 @@ export function screenToCases(input: ScreenCalcInput): ScreenCalcResult {
     cabinetsPerCaseHalf,
     hangingBarLengthM = 0.5,
     matrixMode = 'hybrid',
+    customRows,
   } = input;
 
   const cabinetWidthM = cabinetWidthCm / 100;
@@ -70,26 +70,14 @@ export function screenToCases(input: ScreenCalcInput): ScreenCalcResult {
   // Liczba kolumn (oś X)
   const columns = Math.max(1, Math.round(widthM / cabinetWidthM));
 
-  let fullRows = 0;
-  let halfRows = 0;
+  // Domyślny lub zdefiniowany przez użytkownika rozkład rzędów
+  const rows: CabinetRowType[] =
+    customRows && customRows.length > 0
+      ? [...customRows]
+      : generateDefaultRows(heightM, cabinetHeightM, halfHeightM, matrixMode);
 
-  if (matrixMode === 'half_only') {
-    // Cały ekran zbudowany z małych modułów (np. 50x50)
-    fullRows = 0;
-    halfRows = Math.max(1, Math.round(heightM / halfHeightM));
-  } else if (matrixMode === 'full_only') {
-    // Tylko moduły pełne (np. 50x100), zaokrąglamy rzędy do pełnych metrów
-    fullRows = Math.max(1, Math.round(heightM / cabinetHeightM));
-    halfRows = 0;
-  } else {
-    // Hybryda: pełne rzędy 100cm + opcjonalny 1 rząd połówki 50cm
-    fullRows = Math.floor(heightM / cabinetHeightM);
-    const remainder = Math.round((heightM - fullRows * cabinetHeightM) * 100) / 100;
-    halfRows = remainder >= halfHeightM - 0.001 ? 1 : 0;
-    if (fullRows === 0 && halfRows === 0) {
-      fullRows = 1; // Zabezpieczenie minimalnego rozmiaru
-    }
-  }
+  const fullRows = rows.filter((r) => r === "full").length;
+  const halfRows = rows.filter((r) => r === "half").length;
 
   // Łączna liczba klocków
   const fullCabinets = columns * fullRows;
@@ -108,14 +96,22 @@ export function screenToCases(input: ScreenCalcInput): ScreenCalcResult {
   // Belki zawiesia: 1 belka co hangingBarLengthM szerokości
   const hangingBarsNeeded = Math.ceil(actualWidthM / hangingBarLengthM);
 
-  const totalRows = fullRows + halfRows;
+  const totalRows = rows.length;
   const reinforcementPlates = calculateReinforcementPlates(columns, totalRows);
+
+  // Rozdzielczość w pikselach
+  const resX = input.resolutionX ?? 128;
+  const resYFull = input.resolutionYFull ?? 256;
+  const resYHalf = input.resolutionYHalf ?? 128;
+  const pixelWidth = columns * resX;
+  const pixelHeight = fullRows * resYFull + halfRows * resYHalf;
 
   return {
     columns,
     fullRows,
     halfRows,
     totalRows,
+    rows,
     fullCabinets,
     halfCabinets,
     reinforcementPlates,
@@ -124,11 +120,61 @@ export function screenToCases(input: ScreenCalcInput): ScreenCalcResult {
     casesTotalNeeded,
     areaSqM,
     hangingBarsNeeded,
+    pixelWidth,
+    pixelHeight,
     matrixMode,
     isHybrid: fullRows > 0 && halfRows > 0,
     widthM: actualWidthM,
     heightM: actualHeightM,
   };
+}
+
+/**
+ * Generuje domyślny układ rzędów na podstawie wysokości i trybu matrycy.
+ */
+export function generateDefaultRows(
+  heightM: number,
+  cabinetHeightM = 1.0,
+  halfHeightM = 0.5,
+  matrixMode: ScreenMatrixMode = "hybrid"
+): CabinetRowType[] {
+  if (matrixMode === "half_only") {
+    return Array<CabinetRowType>(Math.max(1, Math.round(heightM / halfHeightM))).fill("half");
+  }
+  if (matrixMode === "full_only") {
+    return Array<CabinetRowType>(Math.max(1, Math.round(heightM / cabinetHeightM))).fill("full");
+  }
+  const fullCount = Math.floor(heightM / cabinetHeightM);
+  const remainder = Math.round((heightM - fullCount * cabinetHeightM) * 100) / 100;
+  const hasHalf = remainder >= halfHeightM - 0.001;
+  const list: CabinetRowType[] = Array<CabinetRowType>(Math.max(1, fullCount)).fill("full");
+  if (hasHalf) list.push("half");
+  return list;
+}
+
+/**
+ * Inteligentne przełączanie / podział rzędu na płótnie:
+ * - Pełny (1.0m) -> dzieli na dwie połówki (0.5m + 0.5m)
+ * - Połówka (0.5m) obok innej połówki -> scala w cały (1.0m)
+ */
+export function toggleRowSplit(rows: CabinetRowType[], idx: number): CabinetRowType[] {
+  const target = rows[idx];
+  if (!target) return rows;
+  const next = [...rows];
+  if (target === "full") {
+    next.splice(idx, 1, "half", "half");
+    return next;
+  }
+  if (idx + 1 < next.length && next[idx + 1] === "half") {
+    next.splice(idx, 2, "full");
+    return next;
+  }
+  if (idx - 1 >= 0 && next[idx - 1] === "half") {
+    next.splice(idx - 1, 2, "full");
+    return next;
+  }
+  next[idx] = "full";
+  return next;
 }
 
 /**
@@ -142,11 +188,8 @@ export function calculateReinforcementPlates(columns: number, totalRows: number)
   return (columns - 1) * (totalRows - 1);
 }
 
-/**
- * Zwraca czytelny raport tekstowy dla debugowania i logów.
- */
 export function formatScreenReport(r: ScreenCalcResult): string {
-  const lines = [
+  return [
     `Ekran: ${r.widthM}m × ${r.heightM}m (${r.areaSqM} m²) [Tryb: ${r.matrixMode}]`,
     `Siatka: ${r.columns} kol. × (${r.fullRows} rz. pełnych + ${r.halfRows} rz. połówek = ${r.totalRows} rzędów)`,
     `Kabinety: ${r.fullCabinets} pełnych + ${r.halfCabinets} połówek`,
@@ -155,6 +198,5 @@ export function formatScreenReport(r: ScreenCalcResult): string {
     `Razem skrzyń: ${r.casesTotalNeeded}`,
     `Belki zawiesia: ${r.hangingBarsNeeded} szt.`,
     `Blachy usztywniające: ${r.reinforcementPlates} szt. (${Math.max(0, r.columns - 1)} × ${Math.max(0, r.totalRows - 1)})`,
-  ];
-  return lines.join('\n');
+  ].join('\n');
 }

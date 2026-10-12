@@ -5,7 +5,7 @@
  * Scenariusz testowy: Ekran Dicolor P3.9 6m × 3.5m, bramka z wciągarkami ręcznymi
  */
 
-import { screenToCases, formatScreenReport } from '../screenCalc';
+import { screenToCases, formatScreenReport, toggleRowSplit } from '../screenCalc';
 import { solveGoalpost, formatGoalpostReport } from '../trussCalc';
 
 // ─── KONFIGURACJA TESTU ───────────────────────────────────────────────────────
@@ -63,6 +63,14 @@ assert('hangingBarsNeeded = 12', screen.hangingBarsNeeded, 12);   // 6m / 0.5m
 assert('isHybrid = true',        screen.isHybrid,           true);
 assert('totalRows = 4',          screen.totalRows,          4);
 assert('reinforcementPlates = 33 (11 * 3)', screen.reinforcementPlates, 33);
+assert('pixelWidth = 1536',      screen.pixelWidth,         1536);
+assert('pixelHeight = 896',      screen.pixelHeight,        896);
+assert('rows = [full,full,full,half]', screen.rows, ['full', 'full', 'full', 'half']);
+
+const splitRows = toggleRowSplit(screen.rows, 0);
+assert('split full into halves', splitRows, ['half', 'half', 'full', 'full', 'half']);
+const mergedRows = toggleRowSplit(splitRows, 0);
+assert('merged halves back to full', mergedRows, ['full', 'full', 'full', 'half']);
 
 // ─── TEST 2: SILNIK KRATOWNIC ─────────────────────────────────────────────────
 

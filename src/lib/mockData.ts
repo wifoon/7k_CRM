@@ -346,6 +346,7 @@ export interface JobScreenConfig {
   name: string;
   systemId: string;
   matrixMode?: 'hybrid' | 'full_only' | 'half_only';
+  customRows?: ('full' | 'half')[];
   widthM: number;
   heightM: number;
   mountingType: 'brak' | 'bramka' | 'kreska' | 'elki';

@@ -3,7 +3,12 @@
 import React from "react";
 import { JobScreenConfig } from "@/lib/mockData";
 import { solveTrussSections } from "@/utils/trussCalc";
-import { calculateReinforcementPlates } from "@/utils/screenCalc";
+import {
+  calculateReinforcementPlates,
+  CabinetRowType,
+  ScreenMatrixMode,
+  generateDefaultRows,
+} from "@/utils/screenCalc";
 import { Box, Layers, ShieldCheck } from "lucide-react";
 
 interface ScreenBOMSummaryCardProps {
@@ -16,6 +21,8 @@ interface ScreenBOMSummaryCardProps {
   hoistSource?: "none" | "warehouse";
   hoistQty?: number;
   usePlates?: boolean;
+  customRows?: CabinetRowType[];
+  matrixMode?: ScreenMatrixMode;
 }
 
 export function ScreenBOMSummaryCard({
@@ -28,11 +35,18 @@ export function ScreenBOMSummaryCard({
   hoistSource = "none",
   hoistQty = 2,
   usePlates = false,
+  customRows,
+  matrixMode = "hybrid",
 }: ScreenBOMSummaryCardProps) {
   const cols = Math.max(1, Math.round(widthM / 0.5));
-  const fullRows = Math.floor(heightM / 1.0);
-  const halfRows = heightM % 1.0 >= 0.5 ? 1 : 0;
-  const totalRows = fullRows + halfRows;
+  const rows =
+    customRows && customRows.length > 0
+      ? customRows
+      : generateDefaultRows(heightM, 1.0, 0.5, matrixMode);
+
+  const fullRows = rows.filter((r) => r === "full").length;
+  const halfRows = rows.filter((r) => r === "half").length;
+  const totalRows = rows.length;
   const reinforcementPlatesQty = calculateReinforcementPlates(cols, totalRows);
 
   const fullCabinets = cols * fullRows;
